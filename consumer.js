@@ -9,48 +9,53 @@
  * Filename: consumer.js
  */
 
-// Global variables declaration
-var sq = require('simplequeue');
-var client = sq.createRemoteClient();
+RedisSMQ = require("rsmq");
+var rsmq = new RedisSMQ( {host: "127.0.0.1", port: 6379, ns: "rsmq"} );
+var queueName = "myqueue";
 
 
 /**
  * Function to consume the queue messages
  * @param {SimpleQueue} queue : The queue where objects will be processed
  */
-function Consumer(pQueue) {
+function Consumer() {
 
     var self = this;
     
     this.process = function() {
-        pQueue.getMessage(function (err, msg) {
-            if (err) {
-                console.log(err);
-            }
-            else if (msg != null) {
-                console.log(msg.messageName);
+
+        rsmq.receiveMessage({qname : queueName}, function (err, resp) {
+
+          
+            if (resp.id) {
+                var message = JSON.parse(resp.message);
+                console.log(message.messageName);
+                deleteMessage(resp);
             }
             else {
-                console.log("Null message");
-
+                console.log("No messages for me...")
             }
-            
+
+
             setTimeout(self.process, 100);
         });
     }
 }
 
-// Get the queue reference and initialize consumer process
-client.on('remote', function(remote) {
-    remote.createQueue('queue', function(err, queue) {
-        if (err) {
-            console.log(err);
-            process.exit(1);
-        }
-        
-        (new Consumer(queue)).process();
-    });
-});
+function deleteMessage(pMessage) {
 
-// Connect to the client
-client.connect(3000);
+    rsmq.deleteMessage({qname : queueName, id:pMessage.id}, function (err, resp) {
+
+        if (resp===1) {
+            //console.log("Message deleted.") 
+        }
+        else {
+            //console.log("Message not found.")
+        }
+    });
+}
+
+(new Consumer()).process();
+
+
+// Get the queue reference and initialize consumer process

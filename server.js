@@ -10,6 +10,14 @@
  */
 
 // Starts the Queue remote server
-var simplequeue = require('simplequeue');
-simplequeue.createRemoteServer().listen(3000);
-console.log('Listening at 3000');
+RedisSMQ = require("rsmq");
+var rsmq = new RedisSMQ( {host: "127.0.0.1", port: 6379, ns: "rsmq"} );
+var queueName = "myqueue";
+
+
+rsmq.createQueue({qname:queueName}, function (err, resp) {
+		if (resp===1) {
+			console.log("queue created")
+		}
+});
+

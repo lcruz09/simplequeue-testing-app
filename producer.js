@@ -10,11 +10,12 @@
  */
 
 // Global variables declaration
-var sq = require('simplequeue');
+RedisSMQ = require("rsmq");
+var rsmq = new RedisSMQ( {host: "127.0.0.1", port: 6379, ns: "rsmq"} );
 var threads = require('webworker-threads');
-var client = sq.createRemoteClient();
 var maxProducts = 30;
 var maxThreads = 8;
+var queueName = 'myqueue';
 
 /**
  * Gets a random number in the specified range
@@ -26,14 +27,12 @@ function getRandomInteger(from, to) {
     return from + Math.floor(Math.random()*(to-from));
 }
 
-
-
 /**
  * Producer function that sends objects to the simple queue
  * @param {SimpleQueue} pQueue : The queue where the messages will be sent
  * @param {String} pName  [description]
  */
-function Producer(pQueue, pName) {
+function Producer(pName) {
 
     var self = this;
     var productNo = 0;
@@ -100,32 +99,31 @@ function Producer(pQueue, pName) {
             __v : 0 
         }
 
-        pQueue.putMessage(message);
-        console.log(messageName);
-        productNo++;
+        // Send a message to the created queue, message can only be a string
+        rsmq.sendMessage({qname: queueName, message: JSON.stringify(message)}, function (err, resp) {
+                
+            if(err)
+            {
+                console.log(err);
+                process.exit();
+            }
 
+            if (resp) {
+                console.log(message.messageName);
+            }
+        });
+
+        productNo++;
         if(productNo < maxProducts) {
             setTimeout(self.process, getRandomInteger(500, 700));
         }
     }
 }
 
-// Set the remote listener to create the simple queue
-client.on('remote', function(remote) {
-    remote.createQueue('queue', function(err, queue) {
-        
-        if (err) {
-            console.log(err);
-            process.exit(1);
-        }
 
-        // Initialize threads
-        for (threadNo = 0; threadNo < maxThreads; threadNo++) { 
-            (new Producer(queue, "Producer: " + threadNo)).process();
-        }
 
-    });
-});
+// Initialize threads
+for (threadNo = 0; threadNo < maxThreads; threadNo++) { 
+    (new Producer("Producer: " + threadNo)).process();
+}
 
-// Connect to the client queue
-client.connect(3000);

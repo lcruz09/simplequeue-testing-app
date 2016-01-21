@@ -10,7 +10,8 @@
   "author": "lcruz",
   "license": "ISC",
   "dependencies": {
-    "simplequeue": "0.0.4",
+    "busmq": "https://github.com/capriza/node-busmq.git",
+    "rsmq": "^0.4.0",
     "webworker-threads": "^0.6.2"
   }
 }
